@@ -1,42 +1,79 @@
 import streamlit as st
 st.title('Estimasi Kegemukan pada Kebiasaan makan')
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
-#membagi kolom
-col1, col2 = st.columns(2)
+# Load the dataset
+data = pd.read_csv('obesity_dataset.csv')
 
-with col1 :
-    Berat = st.text_input ('input nilai berat badan')
+# Split the dataset into features and labels
+X = data.iloc[:, :-1].values
+y = data.iloc[:, -1].values
 
-with col2 :
-    tinggi = st.text_input ('input nilai tinggi badan')
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-with col1 :
-    kalori = st.text_input ('input nilai kalori harian')
+# Scale the features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-with col2 :
-    fisik = st.text_input ('input nilai Aktifitas Fisik')
+# Define the neural network architecture
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.fc1 = nn.Linear(16, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, 4)
+        self.relu = nn.ReLU()
+    
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
 
-with col1 :
-    Insulin = st.text_input ('input nilai Insulin')
+net = Net()
 
-with col2 :
-    BMI = st.text_input ('input nilai BMI')
+# Define the loss function and optimizer
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(net.parameters(), lr=0.001)
 
-with col1 :
-    DiabetesPedigreeFunction = st.text_input ('input nilai Diabetes Pedigree Function')
+# Train the neural network
+num_epochs = 100
+for epoch in range(num_epochs):
+    running_loss = 0.0
+    for i, data in enumerate(zip(X_train, y_train)):
+        inputs, labels = data
+        inputs = torch.tensor(inputs, dtype=torch.float32).unsqueeze(0)
+        labels = torch.tensor(labels, dtype=torch.long)
+        
+        optimizer.zero_grad()
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        
+        running_loss += loss.item()
+    print('Epoch %d loss: %.3f' % (epoch+1, running_loss / len(y_train)))
 
-with col2 :
-    Age = st.text_input ('input nilai Age')
+# Evaluate the neural network
+with torch.no_grad():
+    correct = 0
+    total = 0
+    for i, data in enumerate(zip(X_test, y_test)):
+        inputs, labels = data
+        inputs = torch.tensor(inputs, dtype=torch.float32).unsqueeze(0)
+        labels = torch.tensor(labels, dtype=torch.long)
+        
+        outputs = net(inputs)
+        _, predicted = torch.max(outputs.data, 1)
+        
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
 
-# code untuk prediksi
-diab_diagnosis = ''
-
-# membuat tombol untuk prediksi
-if st.button('Test Prediksi Diabetes'):
-    diab_prediction = diabetes_model.predict([[Berat, tinggi, kalori, fisik, Insulin, BMI, DiabetesPedigreeFunction, Age]])
-
-    if(diab_prediction[0] == 1):
-        diab_diagnosis = 'Anda mengalami Obess'
-    else:
-        diab_diagnosis = 'Anda tidak mengalami Obes'
-st.success(diab_diagnosis)
+    print('Accuracy of the neural network on the test data: %.2f %%' % (100 * correct / total))
