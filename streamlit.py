@@ -1,11 +1,4 @@
 import streamlit as st
-import pandas as pd
-import pickle
-
-# membaca model
-train_data = pd.load_csv(open('train.csv', 'rb'))
-
-#judul web
 st.title('Estimasi Kegemukan pada Kebiasaan makan')
 
 #membagi kolom
