@@ -2,7 +2,7 @@ import streamlit as st
 import pickle
 
 # membaca model
-data_model = pickle.load(open('train.csv', 'rb'))
+train_data = pd.load_csv(open('train.csv', 'rb'))
 
 #judul web
 st.title('Estimasi Kegemukan pada Kebiasaan makan')
